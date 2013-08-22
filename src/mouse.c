@@ -27,3 +27,14 @@ void mouse_map_free(struct mouse_map** map) {
 	free((*map)->arr);
 	free(*map);
 }
+
+void * mouse_read(void * args) {
+	struct mouse_thread_args* thread_args;
+	struct mouse_map* map;
+	char* path;
+	int fd;
+   	thread_args = (struct mouse_thread_args*)args;
+	map = thread_args->map;
+	path = thread_args->mouse_path;
+	fd = open(path, O_RDONLY);
+}
