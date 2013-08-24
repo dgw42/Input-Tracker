@@ -40,7 +40,6 @@ void * mouse_read(void * args) {
 		if(XQueryPointer(map->disp, root_win, 
 					&root_return, &child_return, 
 					&root_x, &root_y, &win_x, &win_y, &mask_return)) {
-			printf("(%d,%d)\n", root_x, root_y);
 			map->arr[(root_x) + (map->width * root_y)] = 1;
 		}
 		if(map->exit)

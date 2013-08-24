@@ -3,6 +3,9 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include "mouse.h"
+#include "cv.h"
+#include "highgui.h"
+#include "math.h"
 
 void create_map_image(struct mouse_map* map, char* path);
 
@@ -23,16 +26,16 @@ void create_map_image(struct mouse_map* map, char* path) {
 	CvScalar black, white;
 	int r, c;
 	image = cvCreateImage(cvSize(map->width, map->height), IPL_DEPTH_8U, 3);
-	black = cvScalar(0,0,0);
-	white = cvScalar(255,255,255);
+	black = cvScalar(0,0,0,0);
+	white = cvScalar(255,255,255,255);
 	for(r = 0; r < map->height; r++) {
 		for(c = 0; c < map->width; c++) {
 			if(map->arr[c + (map->width * r)])
-				cvSet2D(image, c, r, black);
+				cvSet2D(image, r, c, black);
 			else
-				cvSet2D(image, c, r, white);
+				cvSet2D(image, r, c, white);
 		}
 	}
-	cvSaveImage(path, image);
-	cvRealeaseImage(&image);
+	cvSaveImage(path, image, NULL);
+	//cvRealeaseImage(&image);
 }
