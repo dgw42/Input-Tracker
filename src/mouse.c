@@ -2,21 +2,19 @@
 #include <linux/input.h>
 #include <stdlib.h>
 #include <X11/Xlib.h>
-#include <mouse.h>
+#include "mouse.h"
 
 int mouse_map_init(struct mouse_map** map) {
-	Display* disp;
-	Screen* screen;
 	int height, width;
-	disp = XOpenDisplay(NULL);
-	screen = DefaultScreenOfDisplay(disp);
 	*map = (struct mouse_map*)malloc(sizeof(struct mouse_map));
 	if(!(*map))
 		return -1;
-	(*map)->width = screen->width;
-	(*map)->height = screen->height;
-	width = screen->width;
-	height = screen->height;
+	(*map)->disp = XOpenDisplay(NULL);
+	(*map)->screen = DefaultScreenOfDisplay((*map)->disp);
+	(*map)->width = (*map)->screen->width;
+	(*map)->height = (*map)->screen->height;
+	width = (*map)->screen->width;
+	height = (*map)->screen->height;
 	(*map)->arr = (int*)calloc((width*height), sizeof(int));
 	if(!((*map)->arr))
 		return -1;
@@ -25,21 +23,23 @@ int mouse_map_init(struct mouse_map** map) {
 
 void mouse_map_free(struct mouse_map** map) {
 	free((*map)->arr);
+	XCloseDisplay((*map)->disp);
 	free(*map);
 }
 
 void * mouse_read(void * args) {
-	struct mouse_thread_args* thread_args;
-	struct mouse_map* map;
-	struct input_event ie;
-	char* path;
-	int fd;
-   	thread_args = (struct mouse_thread_args*)args;
-	map = thread_args->map;
-	path = thread_args->mouse_path;
-	fd = open(path, O_RDONLY);
+	struct mouse_map * map = (struct mouse_map*)args;
 	while(1) {
-		read(fd, &ie, sizeof(struct input_event));
-
+		Window root_return, child_return;
+		Window root_win = XRootWindow(map->disp, 0);
+		int root_x, root_y, win_x, win_y;
+		unsigned int mask_return;
+		if(XQueryPointer(map->disp, root_win, 
+					&root_return, &child_return, 
+					&root_x, &root_y, &win_x, &win_y, &mask_return)) {
+			printf("(%d,%d)\n", root_x, root_y);
+			map->arr[(root_x) + (map->width * root_y)] = 1;
+			sleep(1);
+		}
 	}
 }

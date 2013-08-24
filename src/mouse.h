@@ -1,13 +1,12 @@
+#include <X11/Xlib.h>
+
 /*Contains data of where mouse has been*/
 struct mouse_map {
 	int *arr; //2D array allocated to size of screen in row-major order
 	int width;
 	int height;
-};
-
-struct mouse_thread_args {
-	struct mouse_map* map;
-	char* mouse_path;
+	Display* disp; //Xlib primary display
+	Screen* screen;
 };
 
 //initialize mouse_map struct, array is size of screen resolution
