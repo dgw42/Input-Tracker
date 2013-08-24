@@ -55,7 +55,6 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	//meat section
 	disp = XOpenDisplay(NULL);
 	num_displays = XScreenCount(disp);
 	XCloseDisplay(disp);
