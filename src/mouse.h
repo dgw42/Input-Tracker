@@ -7,6 +7,7 @@ struct mouse_map {
 	int height;
 	Display* disp; //Xlib primary display
 	Screen* screen;
+	bool exit;
 };
 
 //initialize mouse_map struct, array is size of screen resolution

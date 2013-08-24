@@ -2,6 +2,8 @@
 #include <linux/input.h>
 #include <stdlib.h>
 #include <X11/Xlib.h>
+#include <stdbool.h>
+#include <pthread.h>
 #include "mouse.h"
 
 int mouse_map_init(struct mouse_map** map) {
@@ -15,6 +17,7 @@ int mouse_map_init(struct mouse_map** map) {
 	(*map)->height = (*map)->screen->height;
 	width = (*map)->screen->width;
 	height = (*map)->screen->height;
+	(*map)->exit = false;
 	(*map)->arr = (int*)calloc((width*height), sizeof(int));
 	if(!((*map)->arr))
 		return -1;
@@ -39,7 +42,8 @@ void * mouse_read(void * args) {
 					&root_x, &root_y, &win_x, &win_y, &mask_return)) {
 			printf("(%d,%d)\n", root_x, root_y);
 			map->arr[(root_x) + (map->width * root_y)] = 1;
-			sleep(1);
 		}
+		if(map->exit)
+			return;
 	}
 }
