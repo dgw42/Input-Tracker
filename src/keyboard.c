@@ -9,39 +9,18 @@
 #include <time.h>
 #include <X11/Xlib.h>
 #include <X11/X.h>
-#define VERSION         "0.1"
-#define DEFAULT_DISPLAY ":0"
-#define DEFAULT_DELAY   10000
+#include "keyboard.h"
 #define BIT(c, x)       ( c[x/8]&(1<<(x%8)) )
 #define TRUE            1
 #define FALSE           0
  
 #define KEYSYM_STRLEN   64
  
-#define SHIFT_DOWN      1
-#define LOCK_DOWN       5
-#define CONTROL_DOWN    3
-#define ISO3_DOWN       4
-#define MODE_DOWN       5
- 
-/* It is pretty standard */
-#define SHIFT_INDEX     1  /*index for XKeycodeToKeySym(), for shifted keys*/
-#define MODE_INDEX      2
-#define MODESHIFT_INDEX 3
-#define ISO3_INDEX      4
-#define ISO3SHIFT_INDEX 4
- 
 /* Global variables */
-extern Display *disp;
+static Display *disp;
+static FILE* logfile;
+static FILE* statfile;
  
-Display *disp;
-FILE* logfile;
-FILE* statfile;
- 
-char* KeyCodeToStr(int code);
-void out(char* str, long time, int i);
-int outputStats();
-
 typedef struct log {
 	char* str; //the letter this log is assigned to
 	unsigned int numpressed; //total number of keypresses
@@ -53,17 +32,6 @@ typedef struct log {
 } log;
 
 log** logs;
-
-int usage()
-{
-    printf("%s\n%s\n%s\n%s\n%s%s%s\n",
-           "USAGE: xspy -display <display> -delay <usecs> -up",
-           "       Options: display, specifies an X display.",
-           "           delay, determines the polling frequency (.1 sec is 100000 usecs)",
-           "           up, gives up transitions for some keys.",
-           "       Version ", VERSION, ", modified by Eugene ");
-    exit(0);
-}
  
 void cleaner(int sig)
 {
@@ -171,10 +139,10 @@ int StrTimer(char* str, char* mode)
 	return 0;
 }
 
-int main(int argc, char *argv[])
+void * key_thread(void * args)
 {
-	char	*hostname = ":0",
-			*char_ptr,
+	struct key_thread_args* key_args = (struct key_thread_args*)args;
+	char	*char_ptr,
 			buf1[32],
 			buf2[32],
 			*keys,
@@ -182,21 +150,10 @@ int main(int argc, char *argv[])
 	int 	i,
 	  	 	delay = 10000;
 
-	char* logfilename;
-	char* statfilename;
-	if (argc == 3) {
-		logfilename = argv[1];
-		statfilename = argv[2];
-	} else if (argc == 2) {
-		logfilename = argv[1];
-		statfilename = "keystat.txt";
-	} else {
-		logfilename = "keylog.txt";
-		statfilename = "keystat.txt";
-	}
+	char* logfilename = key_args->logfilename;
+	char* statfilename = key_args->statfilename;
 	logfile = fopen(logfilename, "w");
 	statfile = fopen(statfilename, "w");
-	printf("Keylogger is running...\nOutputting log to %s\nOutputting stats upon exit to %s\n", logfilename, statfilename);
 
 	signal(SIGINT, cleaner);
 	signal(SIGTERM, cleaner);
@@ -204,7 +161,7 @@ int main(int argc, char *argv[])
   	initLogs();
  
   	/* setup Xwindows */
-	disp = XOpenDisplay(hostname);
+	disp = XOpenDisplay(NULL);
 	if (disp == NULL) {
 		fprintf(stderr, "Cannot open display\n");
 		exit(1);
@@ -247,7 +204,12 @@ int main(int argc, char *argv[])
 		saved = keys;
 		keys = char_ptr;
 
-	  	usleep(delay);
+		if(key_args->exit) {
+			outputStats();
+			fclose(statfile);
+			fclose(logfile);
+			return;
+		}
 	}
 
 }
@@ -288,12 +250,14 @@ int outputStats()
 	int i;
 	long avgTimeTotal = 0;
 	int keypressesTotal = 0;
+	int keytypes = 0;
 	for (i = 0; i < 26; i++) {
 		if (logs[i]->avgtime != 0)
-			avgTimeTotal += logs[i]->avgtime;
+			keytypes++;
+		avgTimeTotal += logs[i]->avgtime;
 		keypressesTotal += logs[i]->numpressed;
 	}
-	avgTimeTotal = avgTimeTotal / 26.0;
+	avgTimeTotal = avgTimeTotal / keytypes;
 	fprintf(statfile, "\tAverage Keypress Time:\t\t\t\t%ld milliseconds\n", avgTimeTotal);
 	fprintf(statfile, "\tTotal Number of Keypresses:\t\t%d presses\n",
 			keypressesTotal);

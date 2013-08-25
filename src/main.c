@@ -10,6 +10,7 @@ Project: Input Tracker
 #include <stdbool.h>
 #include <unistd.h>
 #include "mouse.h"
+#include "keyboard.h"
 #include "cv.h"
 #include "highgui.h"
 #include "math.h"
@@ -22,9 +23,10 @@ char* name_format = "out";
 int main(int argc, char** argv) {
 	//needed call variables
 	struct mouse_map** maps;
+	struct key_thread_args* key_args;
 	int num_displays, i, option;
 	Display* disp;
-	pthread_t* threads;
+	pthread_t *threads, board_thread;
 
 	//options section
 	while((option = getopt(argc, argv, "t:n:i:h")) != -1) {
@@ -61,6 +63,10 @@ int main(int argc, char** argv) {
 
 	//Allocate needed mouse map structures
 	maps = (struct mouse_map**)malloc(sizeof(struct mouse_map*) * num_displays);
+	key_args = (struct key_thread_args*)malloc(sizeof(struct key_thread_args));
+	key_args->logfilename = "log.txt";
+	key_args->statfilename = "stat.txt";
+	key_args->exit = false;
 	//Allocate array to hold thread structs
 	threads = (pthread_t*)malloc(sizeof(pthread_t) * num_displays);
 	//spawn threads, 1 per display
@@ -69,20 +75,24 @@ int main(int argc, char** argv) {
 		mouse_map_init(&(maps[i]), i);
 		pthread_create(&(threads[i]), NULL, mouse_read, maps[i]);
 	}
+	pthread_create(&board_thread, NULL, key_thread, key_args);
 	
 	//sleep for specified runtime amout
 	sleep(runtime);
+	key_args->exit = true;
 	for(i = 0; i < num_displays; i++) {
 		//signal thread to save image of mouse map and exit
 		maps[i]->exit = true;
 		pthread_join(threads[i], NULL);
 	}
+	pthread_join(board_thread, NULL);
 
 	//Free up used memory
 	for(i = 0; i < num_displays; i++)
 		mouse_map_free(&(maps[i]));
 	free(maps);
 	free(threads);
+	free(key_args);
 }
 
 void create_map_image(struct mouse_map* map, char* path) {
