@@ -25,11 +25,15 @@ int main(int argc, char** argv) {
 	struct mouse_map** maps;
 	struct key_thread_args* key_args;
 	int num_displays, i, option;
+	char *logfile, *statfile;
 	Display* disp;
 	pthread_t *threads, board_thread;
 
+	logfile = "log.txt";
+	statfile = "stat.txt";
+
 	//options section
-	while((option = getopt(argc, argv, "t:n:i:h")) != -1) {
+	while((option = getopt(argc, argv, "t:n:i:s:l:h")) != -1) {
 		switch(option) {
 			case 'h': printf("Usage: %s [-t time in seconds] [-n name prefix format] [-i image format(png or jpg)]\n", argv[0]);
 					  exit(-1);
@@ -48,6 +52,12 @@ int main(int argc, char** argv) {
 								   break;
 					  }
 					  break;
+			//'-s' option, specifies file to output stats
+			case 's': statfile = optarg;
+					  break;
+			//'-l' option, specifies log file
+			case 'l': logfile = optarg;
+					  break;
 			//bad option
 			case '?': fprintf(stderr, "unknown option specified");
 					  exit(-1);
@@ -64,8 +74,8 @@ int main(int argc, char** argv) {
 	//Allocate needed mouse map structures
 	maps = (struct mouse_map**)malloc(sizeof(struct mouse_map*) * num_displays);
 	key_args = (struct key_thread_args*)malloc(sizeof(struct key_thread_args));
-	key_args->logfilename = "log.txt";
-	key_args->statfilename = "stat.txt";
+	key_args->logfilename = logfile;
+	key_args->statfilename = statfile;
 	key_args->exit = false;
 	//Allocate array to hold thread structs
 	threads = (pthread_t*)malloc(sizeof(pthread_t) * num_displays);
